@@ -1,17 +1,14 @@
 # -------------------------------
-# AI SaaS V5 Complete Deploy Script + Chrome/Edge Extension
+# AI SaaS V5 Complete Deploy Script + Extension + Auto Install
 # -------------------------------
 
 $home=[Environment]::GetFolderPath("MyDocuments")
 $root=Join-Path $home "AI-SaaS-V5"
 $githubRepoURL="https://github.com/1wb1965197116-jpg/YOUR_REPO_NAME"
+$backendURL="https://ai-saas-v5-project.onrender.com"  # <-- Replace with your Render URL
 
 # ---------------- Folders ----------------
-$folders=@(
-    "$root/backend",
-    "$root/frontend/pages",
-    "$root/extension"
-)
+$folders=@("$root/backend","$root/frontend/pages","$root/extension")
 foreach($f in $folders){
     if(-not(Test-Path $f)){ New-Item -ItemType Directory -Path $f -Force | Out-Null }
 }
@@ -85,6 +82,12 @@ $backendPkg= @"
 $backendPkgPath = Join-Path $root "backend/package.json"
 $backendPkg | Out-File -FilePath $backendPkgPath -Encoding UTF8
 
+# ---------------- Install Backend Dependencies ----------------
+Write-Host "⏳ Installing backend dependencies..."
+Set-Location "$root/backend"
+npm install
+Write-Host "✅ Dependencies installed."
+
 # ---------------- Frontend ----------------
 $frontendHTML=@"
 <!DOCTYPE html>
@@ -107,7 +110,7 @@ async function translate(){
   const prompt=document.getElementById('prompt').value;
   const lang=document.getElementById('lang').value;
   const token=localStorage.getItem('token')||'dummy_token';
-  const res=await fetch('/api/ai',{
+  const res=await fetch('$backendURL/api/ai',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({prompt,token,targetLang:lang})
@@ -147,7 +150,7 @@ $extensionJS=@"
         if(el.dataset.translated) return;
         el.dataset.translated=true;
         try {
-            const res = await fetch('https://ai-saas-v5-project.onrender.com/api/ai',{
+            const res = await fetch('$backendURL/api/ai',{
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({prompt:el.innerText,token:'dummy_token',targetLang:lang})
@@ -251,7 +254,6 @@ $iconSizes=@(16,48,128)
 foreach($s in $iconSizes){
     $iconPath=Join-Path $root "extension/icon$s.png"
     if(-not(Test-Path $iconPath)){
-        # simple placeholder: transparent PNG
         $bytes=[System.Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAA$sAAABgCAYAAAA+Hf6xAAAAHklEQVR42mP8/5+hP6P3nwYGBgYGJggMwMDABzDAAjdCckkAAAAASUVORK5CYII=")
         [System.IO.File]::WriteAllBytes($iconPath,$bytes)
     }
@@ -261,7 +263,7 @@ foreach($s in $iconSizes){
 Set-Location $root
 git init
 git add .
-git commit -m "Initial commit: V5 SaaS + Extension + Camera & Maps + Manifest"
+git commit -m "Initial commit: V5 SaaS + Extension + Auto npm install"
 git branch -M main
 git remote add origin $githubRepoURL
 
