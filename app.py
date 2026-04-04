@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # allow frontend connections
 
 @app.route("/")
 def home():
@@ -17,7 +17,6 @@ def test():
 def chat():
     data = request.json
     user_message = data.get("message", "")
-    # Placeholder AI logic — replace with your own
     return jsonify({"reply": f"You said: {user_message}"})
 
 if __name__ == "__main__":
