@@ -11,23 +11,23 @@ app.use(cors());
 app.use(express.json());
 
 // Serve frontend static files
-app.use(express.static(path.join(__dirname, '../frontend')));
+const frontendPath = path.join(__dirname, '../frontend');
+app.use(express.static(frontendPath));
 
-// Main page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// Example AI translation route (dummy for now)
+// API route
 app.post('/api/ai', (req, res) => {
   const { prompt, targetLang } = req.body;
   res.json({ translation: `Translated (${targetLang}): ${prompt}` });
 });
 
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Catch-all to serve index.html for any other frontend route
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
+// Listen on Render-assigned port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Backend running on port ${PORT}`));
