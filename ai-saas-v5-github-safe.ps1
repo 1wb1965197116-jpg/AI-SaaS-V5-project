@@ -1,19 +1,22 @@
 # -------------------------------
-# AI SaaS V5 Full Deploy Script + Extension + Camera & Maps
+# AI SaaS V5 Complete Deploy Script + Chrome/Edge Extension
 # -------------------------------
+
 $home=[Environment]::GetFolderPath("MyDocuments")
 $root=Join-Path $home "AI-SaaS-V5"
 $githubRepoURL="https://github.com/1wb1965197116-jpg/YOUR_REPO_NAME"
 
-# Create folder structure
-$folders=@("$root/backend","$root/frontend/pages","$root/extension")
+# ---------------- Folders ----------------
+$folders=@(
+    "$root/backend",
+    "$root/frontend/pages",
+    "$root/extension"
+)
 foreach($f in $folders){
-    if(-not(Test-Path $f)){
-        New-Item -ItemType Directory -Path $f -Force | Out-Null
-    }
+    if(-not(Test-Path $f)){ New-Item -ItemType Directory -Path $f -Force | Out-Null }
 }
 
-# --------- Backend Files ---------
+# ---------------- Backend ----------------
 $backendServer= @"
 import express from 'express';
 import cors from 'cors';
@@ -28,20 +31,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve frontend static files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, '../frontend/pages')));
 
-// Root route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/pages/index.html'));
-});
-
-// Health check
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../frontend/pages/index.html')); });
 app.get('/health', (req,res)=>res.json({status:'ok'}));
 
-// AI Translation endpoint
 app.post('/api/ai', async (req,res)=>{
     const {prompt, token, targetLang}=req.body;
     try{
@@ -49,19 +45,17 @@ app.post('/api/ai', async (req,res)=>{
         const response = await fetch('https://api.openai.com/v1/chat/completions',{
             method:'POST',
             headers:{
-                'Authorization':`Bearer ${process.env.OPENAI_KEY}`,
+                'Authorization':\`Bearer \${process.env.OPENAI_KEY}\`,
                 'Content-Type':'application/json'
             },
             body:JSON.stringify({
                 model:'gpt-4',
-                messages:[{role:'user',content:`Translate to ${targetLang}: ${prompt}`}]
+                messages:[{role:'user',content:\`Translate to \${targetLang}: \${prompt}\`}]
             })
         });
         const data = await response.json();
         res.json({translation:data.choices[0].message.content});
-    }catch(e){
-        res.status(500).json({error:e.message});
-    }
+    }catch(e){ res.status(500).json({error:e.message}); }
 });
 
 const PORT = process.env.PORT || 3000;
@@ -91,7 +85,7 @@ $backendPkg= @"
 $backendPkgPath = Join-Path $root "backend/package.json"
 $backendPkg | Out-File -FilePath $backendPkgPath -Encoding UTF8
 
-# --------- Frontend Files ---------
+# ---------------- Frontend ----------------
 $frontendHTML=@"
 <!DOCTYPE html>
 <html>
@@ -128,7 +122,7 @@ async function translate(){
 $frontendPath = Join-Path $root "frontend/pages/index.html"
 $frontendHTML | Out-File -FilePath $frontendPath -Encoding UTF8
 
-# --------- Extension Files ---------
+# ---------------- Extension ----------------
 $extensionJS=@"
 (() => {
     let enabled = true;
@@ -165,7 +159,6 @@ $extensionJS=@"
             sideBySide.style.padding='2px';
             sideBySide.innerHTML='<b>Original:</b><br>'+el.innerText+'<br><b>Translation:</b><br>'+data.translation;
 
-            // Dictation button
             const speakBtn = document.createElement('button');
             speakBtn.textContent='🔊';
             speakBtn.onclick=()=>{ 
@@ -175,7 +168,6 @@ $extensionJS=@"
             sideBySide.appendChild(document.createElement('br'));
             sideBySide.appendChild(speakBtn);
 
-            // Map directions button
             if(el.innerText.match(/\b[A-Z][a-z]+(?:, [A-Z]{2})?\b/)){
                 const mapBtn = document.createElement('button');
                 mapBtn.textContent='📍 Map';
@@ -195,7 +187,6 @@ $extensionJS=@"
     });
     observer.observe(document.body,{childList:true,subtree:true});
 
-    // Camera OCR button
     const createCameraBtn = () => {
         const btn = document.createElement('button');
         btn.textContent='📷 Camera OCR';
@@ -220,7 +211,6 @@ $extensionJS=@"
                 video.style.zIndex=9999;
                 document.body.appendChild(video);
                 alert('Camera active. Capture text using OCR function.');
-                // OCR integration can be added here
             }catch(e){ alert('Camera access denied or not supported'); }
         };
         document.body.appendChild(btn);
@@ -231,11 +221,47 @@ $extensionJS=@"
 $extensionJSPath = Join-Path $root "extension/translate.js"
 $extensionJS | Out-File -FilePath $extensionJSPath -Encoding UTF8
 
-# --------- Git Setup ---------
+# manifest.json
+$manifestJSON=@"
+{
+  ""manifest_version"": 3,
+  ""name"": ""AI Browser Translator V5"",
+  ""version"": ""1.0.0"",
+  ""description"": ""On-page AI translation with side-by-side English, dictation, camera OCR, and map directions."",
+  ""permissions"": [""activeTab"", ""scripting"", ""storage"", ""tabs"", ""camera""],
+  ""host_permissions"": [""<all_urls>""],
+  ""action"": { ""default_title"": ""AI Translate"", ""default_icon"": {""16"":""icon16.png"",""48"":""icon48.png"",""128"":""icon128.png""} },
+  ""background"": { ""service_worker"": ""background.js"" },
+  ""content_scripts"": [ { ""matches"": [""<all_urls>""], ""js"": [""translate.js""], ""run_at"": ""document_idle"" } ],
+  ""icons"": { ""16"":""icon16.png"",""48"":""icon48.png"",""128"":""icon128.png"" }
+}
+"@
+$manifestPath = Join-Path $root "extension/manifest.json"
+$manifestJSON | Out-File -FilePath $manifestPath -Encoding UTF8
+
+# background.js
+$backgroundJS=@"
+chrome.runtime.onInstalled.addListener(()=>{ console.log('AI Browser Translator V5 installed'); });
+"@
+$bgPath = Join-Path $root "extension/background.js"
+$backgroundJS | Out-File -FilePath $bgPath -Encoding UTF8
+
+# Create placeholder icons
+$iconSizes=@(16,48,128)
+foreach($s in $iconSizes){
+    $iconPath=Join-Path $root "extension/icon$s.png"
+    if(-not(Test-Path $iconPath)){
+        # simple placeholder: transparent PNG
+        $bytes=[System.Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAA$sAAABgCAYAAAA+Hf6xAAAAHklEQVR42mP8/5+hP6P3nwYGBgYGJggMwMDABzDAAjdCckkAAAAASUVORK5CYII=")
+        [System.IO.File]::WriteAllBytes($iconPath,$bytes)
+    }
+}
+
+# ---------------- Git Setup ----------------
 Set-Location $root
 git init
 git add .
-git commit -m "Initial commit: V5 SaaS + Extension + Camera & Maps"
+git commit -m "Initial commit: V5 SaaS + Extension + Camera & Maps + Manifest"
 git branch -M main
 git remote add origin $githubRepoURL
 
@@ -244,5 +270,4 @@ if($pushChoice -eq "y"){git push -u origin main}
 
 # Open GitHub in browser
 Start-Process $githubRepoURL
-Write-Host "✅ GitHub repository opened in browser"
-Write-Host "Setup complete. Backend + frontend + extension with camera + maps ready for Render deployment!"
+Write-Host "✅ Complete setup done. Backend, frontend, and extension ready for Render and Chrome/Edge load!"
