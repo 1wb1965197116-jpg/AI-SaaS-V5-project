@@ -12,8 +12,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());          // Allow cross-origin requests
-app.use(express.json());   // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
 
 // ------------------------------
 // 1️⃣ API route: /api/ai
@@ -34,7 +34,7 @@ app.post('/api/ai', async (req, res) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model,
+        model,
         messages: [{ role: 'user', content: `Translate to ${targetLang}: ${prompt}` }]
       })
     });
@@ -62,17 +62,15 @@ app.post('/api/ai', async (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // ------------------------------
-// 3️⃣ Optional: Serve frontend on /dashboard
+// 3️⃣ Serve frontend dashboard
 // ------------------------------
-// Uncomment this section if you want to serve frontend from backend deployment
-/*
 const frontendPath = path.join(__dirname, 'frontend');
-app.use('/dashboard', express.static(frontendPath));
-app.get('/dashboard/*', (req, res) => {
+app.use(express.static(frontendPath));
+
+// Serve index.html for root or any unmatched route
+app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
-app.get('/', (req, res) => res.redirect('/dashboard'));
-*/
 
 // ------------------------------
 // 4️⃣ Start server
