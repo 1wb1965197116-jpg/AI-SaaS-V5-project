@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 
 app = Flask(__name__)
-CORS(app)  # allow frontend connections
+CORS(app)  # allows frontend to connect
 
 @app.route("/")
 def home():
