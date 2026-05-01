@@ -1,29 +1,137 @@
 <!DOCTYPE html>
 <html>
-<head><title>AI SaaS V5 Dashboard</title></head>
+<head>
+  <title>AI SaaS App</title>
+
+  <style>
+    body { font-family:sans-serif; background:#111; color:white; text-align:center; }
+    #chat { width:90%; max-width:600px; margin:auto; }
+    .msg { padding:10px; margin:5px; border-radius:8px; text-align:left; }
+    .user { background:#333; }
+    .ai { background:#1e3a8a; }
+    input, button { padding:10px; margin:5px; }
+  </style>
+</head>
+
 <body>
-<h2>AI Browser Assistant</h2>
-<textarea id='prompt' placeholder='Enter text or URL'></textarea>
-<select id='lang'>
-<option value='English'>English</option>
-<option value='Spanish'>Spanish</option>
-<option value='French'>French</option>
-</select>
-<button onclick='translate()'>Translate</button>
-<pre id='out'></pre>
+
+<h2>🚀 AI SaaS App</h2>
+
+<!-- LOGIN -->
+<div id="loginBox">
+  <h3>🔐 Enter Username</h3>
+  <input id="username" placeholder="Enter name">
+  <button onclick="login()">Login</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
+  <h3 id="welcome"></h3>
+
+  <div id="chat"></div>
+
+  <input id="input" placeholder="Ask AI...">
+  <button onclick="send()">Send</button>
+  <button onclick="clearChat()">🧹 Clear Chat</button>
+
+</div>
+
 <script>
-async function translate(){
-  const prompt=document.getElementById('prompt').value;
-  const lang=document.getElementById('lang').value;
-  const token=localStorage.getItem('token')||'dummy_token';
-  const res=await fetch('/api/ai',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({prompt,token,targetLang:lang})
-  });
-  const data=await res.json();
-  document.getElementById('out').innerText=data.translation;
+
+const API_URL = "https://ai-web-tool-1.onrender.com/ai";
+
+// ===== LOGIN =====
+function login(){
+  const user = document.getElementById("username").value;
+  if(!user) return alert("Enter name");
+
+  localStorage.setItem("user", user);
+  loadApp();
 }
+
+function loadApp(){
+  const user = localStorage.getItem("user");
+
+  if(!user){
+    loginBox.style.display = "block";
+    app.style.display = "none";
+    return;
+  }
+
+  loginBox.style.display = "none";
+  app.style.display = "block";
+  welcome.innerText = "Welcome " + user;
+
+  loadChat();
+}
+
+window.onload = loadApp;
+
+// ===== CHAT MEMORY =====
+function getChat(){
+  const user = localStorage.getItem("user");
+  return JSON.parse(localStorage.getItem("chat_"+user) || "[]");
+}
+
+function saveChat(chat){
+  const user = localStorage.getItem("user");
+  localStorage.setItem("chat_"+user, JSON.stringify(chat));
+}
+
+function renderChat(){
+  chat.innerHTML = "";
+  const messages = getChat();
+
+  messages.forEach(m=>{
+    const div = document.createElement("div");
+    div.className = "msg " + m.type;
+    div.innerText = m.text;
+    chat.appendChild(div);
+  });
+}
+
+// ===== SEND MESSAGE =====
+async function send(){
+  const input = document.getElementById("input");
+  const text = input.value;
+  if(!text) return;
+
+  let messages = getChat();
+
+  messages.push({text:"You: "+text, type:"user"});
+  saveChat(messages);
+  renderChat();
+
+  input.value = "";
+
+  const res = await fetch(API_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({prompt: text})
+  });
+
+  const data = await res.json();
+  const reply = data.result || "Error";
+
+  messages.push({text:"AI: "+reply, type:"ai"});
+  saveChat(messages);
+  renderChat();
+}
+
+// ===== LOAD CHAT =====
+function loadChat(){
+  renderChat();
+}
+
+// ===== CLEAR =====
+function clearChat(){
+  const user = localStorage.getItem("user");
+  localStorage.removeItem("chat_"+user);
+  renderChat();
+}
+
 </script>
+
 </body>
 </html>
