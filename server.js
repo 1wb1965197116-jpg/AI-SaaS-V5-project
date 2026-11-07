@@ -30,7 +30,8 @@ app.get('/health', (req, res) => {
 // AI API Route
 // ------------------------------
 app.post('/api/ai', async (req, res) => {
-  const { prompt, targetLang } = req.body;
+  const { prompt, targetLang } = req.body || {};
+  if (typeof prompt !== "string" || !prompt.trim() || typeof targetLang !== "string" || !targetLang.trim()) return res.status(400).json({ error: "prompt and targetLang are required" });
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
