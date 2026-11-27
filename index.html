@@ -39,7 +39,7 @@
 
 <script>
 
-const API_URL = "https://ai-web-tool-1.onrender.com/ai";
+const API_URL = "/api/ai";
 
 // ===== LOGIN =====
 function login(){
@@ -112,7 +112,7 @@ async function send(){
   });
 
   const data = await res.json();
-  const reply = data.result || "Error";
+  const reply = data.translation || data.result || data.error || "No response returned";
 
   messages.push({text:"AI: "+reply, type:"ai"});
   saveChat(messages);
